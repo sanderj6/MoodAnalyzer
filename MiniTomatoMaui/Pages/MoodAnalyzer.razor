@@ -1,0 +1,43 @@
+﻿@page "/"
+@using Azure
+@using Azure.AI.TextAnalytics
+@using System.Text.Json
+@using System.Diagnostics
+@using MiniTomatoMaui.CosmosDB
+@using MiniTomatoMaui.Data
+@using MiniTomatoMaui.Pages.Components
+@inject UserRecordDbContext DbContext
+
+<h3>Intelligent Text Engine</h3>
+
+@switch (UserState)
+{
+    case SessionState.Input:
+        <InputMood Model="Model" Sentiment="Sentiment" Callback="((model, sentiment) => {Model = model; Sentiment = sentiment; UpdateState(SessionState.Overview);})" StateCallback="((state) => {UpdateState(state);})" />
+        break;
+    case SessionState.Overview:
+        <CascadingValue Value="DbContext">
+            <MoodOverview Model="Model" Sentiment="Sentiment" Callback="((state) => {UpdateState(state);})"></MoodOverview>
+        </CascadingValue>
+        break;
+    case SessionState.History:
+        <CascadingValue Value="DbContext">
+            <MoodHistory Model="Model" Callback="((state) => {UpdateState(state);})" />
+        </CascadingValue>
+        break;
+    default:
+        <InputMood Model="Model" Callback="((model, sentiment) => {Model = model; Sentiment = sentiment; UpdateState(SessionState.Overview);})" />
+        break;
+}
+
+@code {
+    public UserRecord Model { get; set; } = new();
+    public SessionState UserState { get; set; }
+    public DocumentSentiment Sentiment { get; set; }
+
+    public void UpdateState(SessionState state)
+    {
+        UserState = state;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,97 @@
+﻿@using Azure
+@using Azure.AI.TextAnalytics
+@using System.Text.Json
+@using System.Diagnostics
+@using MiniTomatoMaui.Data
+@using MiniTomatoMaui.Services
+@inject TextAnalyzerService SentimentClient
+
+<EditForm Model="Model" OnSubmit="Submitted">
+    <div class="row mt-4">
+        <div class="col-8 offset-2">
+            <p>
+                Describe how you're feeling today
+            </p>
+
+            @if (!string.IsNullOrWhiteSpace(Errors))
+            {
+                <div class="row justify-content-center mb-3">
+                    <div class="col">
+                        <span class="text-danger">@Errors</span>
+                    </div>
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <InputTextArea id="rawText" class="form-control" @bind-Value="Model.RawText" required />
+                </div>
+
+                <div class="float-end">
+                    <button type="submit" class="btn btn-primary float-end">Continue</button>
+                </div>
+            </div>
+
+            <div class="float-end mt-2">
+                <button type="button" class="btn btn-primary float-end" @onclick="UpdateState">My Mood History</button>
+            </div>
+
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter]
+    public UserRecord Model { get; set; } = new();
+
+    [Parameter]
+    public DocumentSentiment Sentiment { get; set; }
+
+    [Parameter]
+    public Action<UserRecord, DocumentSentiment> Callback { get; set; }
+
+    [Parameter]
+    public Action<SessionState> StateCallback { get; set; }
+
+    public string Errors { get; set; }
+
+    public async Task Submitted()
+    {
+        try
+        {
+            Sentiment = await SentimentClient.AnalyzeText(Model.RawText);
+
+            Model.Sentences = Sentiment.Sentences.ToList();
+
+            // Confidence Scores
+            Model.ConfidenceScores = new List<ConfidenceScore>();
+
+            Model.ConfidenceScores.Add(new ConfidenceScore()
+                {
+                    ConfidenceType = Mood.Positive,
+                    Score = Sentiment.ConfidenceScores.Positive * 2
+                });
+            Model.ConfidenceScores.Add(new ConfidenceScore()
+                {
+                    ConfidenceType = Mood.Neutral,
+                    Score = Sentiment.ConfidenceScores.Neutral
+                });
+            Model.ConfidenceScores.Add(new ConfidenceScore()
+                {
+                    ConfidenceType = Mood.Negative,
+                    Score = (Sentiment.ConfidenceScores.Negative * -1)
+                });
+
+            Callback?.Invoke(Model, Sentiment);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    public void UpdateState()
+    {
+        StateCallback?.Invoke(SessionState.History);
+    }
+}

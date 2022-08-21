@@ -1,0 +1,190 @@
+﻿@using Azure
+@using Azure.AI.TextAnalytics
+@using System.Text.Json
+@using System.Diagnostics
+@using MiniTomatoMaui.Data
+@using MiniTomatoMaui.CosmosDB
+@using Microsoft.EntityFrameworkCore
+
+@inject IJSRuntime JsRuntime
+
+<div class="col-10 offset-1">
+    <div class="row" style="display: flex;">
+        @if (IsLoading)
+        {
+            <div class="offset-5 loader"></div>
+        }
+        else
+        {
+            <div class="col-8" style="overflow:hidden;width: 40vw;">
+                <div class="card-styles">
+
+                    <div class="block-header block-header-default">
+                        <h3 class="block-title">
+                            Happiness History
+                        </h3>
+                    </div>
+
+                    <h1 class="block-content block-content-full flex-grow-1 d-flex align-items-center">
+                        <canvas id="chartjs-bar" width="1030" height="515" style="display: block; box-sizing:border-box; height: 515px; width: 1030px;"></canvas>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="col-4" style="overflow:hidden;">
+                <div class="card-styles" style="height:100%;">
+                    <div class="block-header block-header-default">
+                        <h3 class="block-title">Happiness Percentage</h3>
+                    </div>
+
+                    <div class="block-content block-content-full flex-grow-1 d-flex align-items-center">
+                        <canvas id="chartjs-pie" width="1030" height="515" style="display: block; box-sizing:border-box; height: 515px; width: 1030px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-4 offset-4">
+        <div class="row">
+            <div class="col-4 fw-bold">
+                Latest Mood:
+            </div>
+            <div class="col-8 text-muted">
+                @Model?.RawText
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 fw-bold">
+                Overall Sentiment:
+            </div>
+            <div class="col-8 text-muted">
+                @Model?.Sentiment
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 fw-bold">
+                Recorded At:
+            </div>
+            <div class="col-8 text-muted">
+                @Model?.CreatedAt
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 float-end">
+        <button class="btn btn-primary btn-block" @onclick="(() => {ContinueToState(SessionState.Input);})">Start Over</button>
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public UserRecord Model { get; set; }
+
+    [Parameter]
+    public Action<SessionState> Callback { get; set; }
+
+    [CascadingParameter]
+    public UserRecordDbContext DbContext { get; set; }
+
+    public bool IsLoading { get; set; } = true;
+
+    private IJSObjectReference ChartsModule { get; set; }
+    public List<ChartData> PieChartData { get; set; }
+    public List<ChartData> BarChartData { get; set; }
+    public Decimal[] Percentages { get; set; }
+
+    public List<UserRecord> AllRecords { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            base.OnInitialized();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    public async Task GetUserRecords()
+    {
+        AllRecords = await DbContext.UserRecords.ToListAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            try
+            {
+                IsLoading = true;
+                StateHasChanged();
+
+                await GetUserRecords();
+
+                // Check for latest record
+                if (Model.ConfidenceScores is null)
+                {
+                    Model = AllRecords.OrderByDescending(x => x.CreatedAt).FirstOrDefault();
+                }
+
+                IsLoading = false;
+                StateHasChanged();
+
+                ChartsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", new CancellationToken(), "./js/GeneratedJS/ItemCharts.js");
+
+                RenderCharts();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Unable to render charts: {ex}");
+            }
+        }
+    }
+
+    public async void RenderCharts()
+    {
+        try
+        {
+            // Dummy Chart Data
+            List<int> healthy = new();
+            List<int> unhealthy = new();
+            List<DateTime> dates = new();
+
+            Random randomNum = new Random();
+
+            // Pie Chart Data
+            var totalCount = AllRecords.Count();
+            var happyPercentage = AllRecords.Where(x => x.Sentiment == Mood.Positive).Count() / totalCount;
+            var sadPercentage = 100 - happyPercentage;
+
+            Percentages = new decimal[] { happyPercentage, sadPercentage, 0 };
+
+            for (int i = 0; i < 7; i++)
+            {
+                dates.Add(DateTime.Now.AddDays(i));
+
+                healthy.Add(randomNum.Next(100));
+                unhealthy.Add(randomNum.Next(100));
+            }
+
+            var formattedDates = dates.Select(x => x.ToString("MM/dd/yyyy")).ToArray();
+
+            await ChartsModule.InvokeVoidAsync("RenderCharts", new CancellationToken(), formattedDates, healthy.ToArray(), unhealthy.ToArray(), Percentages);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Issue rendering charts: {ex}");
+        }
+    }
+
+    public void ContinueToState(SessionState state)
+    {
+        Callback?.Invoke(state);
+    }
+}

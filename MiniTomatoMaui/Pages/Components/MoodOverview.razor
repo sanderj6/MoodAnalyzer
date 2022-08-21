@@ -1,0 +1,112 @@
+﻿@page "/intelligence"
+@using Azure
+@using Azure.AI.TextAnalytics
+@using System.Text.Json
+@using System.Diagnostics
+@using MiniTomatoMaui.CosmosDB
+@using MiniTomatoMaui.Data
+
+<div class="col-8 offset-2 mt-4">
+    @if (IsLoading)
+    {
+        <div class="offset-5 loader"></div>
+    }
+    else
+    {
+        if (Sentiment is not null)
+        {
+            foreach (var sentence in Sentiment?.Sentences)
+            {
+                var isAccurate = Model.Sentences.Any(x => x.Text == sentence.Text);
+                var isDisabled = !isAccurate;
+                var disabledText = isAccurate ? "" : "line-through";
+
+                <div class="row mb-3">
+
+                    <div class="col-6 text-muted" style="text-decoration:@disabledText">
+                        @sentence.Text
+                    </div>
+                    <div class="col-3" style="text-decoration:@disabledText">
+                        @sentence.Sentiment
+                    </div>
+
+                    <div class="col-3 float-end">
+                        <button class="btn btn-primary btn-block" disabled="@isDisabled" @onclick="(() => {UpdateUserRecord(sentence);})">Not Accurate</button>
+                    </div>
+                </div>
+            }
+        }
+
+        <div>
+            Day Score: <b>@Model?.Score %</b>
+        </div>
+
+        <div class="mt-4 float-end">
+            <button class="btn btn-primary btn-block" @onclick="(async() => {await ContinueToState(SessionState.Input);})">Back</button>
+            <button class="btn btn-primary btn-block" @onclick="(async() => {await ContinueToState(SessionState.History);})">Continue</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public UserRecord Model { get; set; }
+
+    [Parameter]
+    public DocumentSentiment Sentiment { get; set; }
+
+    [Parameter]
+    public Action<SessionState> Callback { get; set; }
+
+    [CascadingParameter]
+    public UserRecordDbContext DbContext { get; set; }
+
+    public bool IsLoading { get; set; }
+
+    public async Task ContinueToState(SessionState state)
+    {
+        // Loader On
+        IsLoading = true;
+        StateHasChanged();
+
+        // Save Record
+        if (state == SessionState.History)
+        {
+            await SaveRecord();
+        }
+
+        // Loader Off
+        IsLoading = false;
+        StateHasChanged();
+
+        Callback?.Invoke(state);
+    }
+
+    public void UpdateUserRecord(SentenceSentiment sentence)
+    {
+        try
+        {
+            Model.Sentences.Remove(sentence);
+
+            var score = Model.ConfidenceScores.Where(x => x.ConfidenceType.ToString() == sentence.Sentiment.ToString()).FirstOrDefault();
+            Model.ConfidenceScores.Remove(score);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Issue updating user record: {ex}");
+        }
+    }
+
+    public async Task SaveRecord()
+    {
+        try
+        {
+            await DbContext.UserRecords.AddAsync(Model);
+            await DbContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Issue saving record to database: {ex}");
+        }
+    }
+}
