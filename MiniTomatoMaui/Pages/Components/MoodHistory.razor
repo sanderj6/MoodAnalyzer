@@ -91,8 +91,8 @@
     public bool IsLoading { get; set; } = true;
 
     private IJSObjectReference ChartsModule { get; set; }
-    public List<ChartData> PieChartData { get; set; }
-    public List<ChartData> BarChartData { get; set; }
+    public List<ChartData> PieChartData { get; set; } = new();
+    public List<ChartData> BarChartData { get; set; } = new();
     public Decimal[] Percentages { get; set; }
 
     public List<UserRecord> AllRecords { get; set; } = new();
@@ -122,6 +122,7 @@
         {
             try
             {
+                // Show Loader
                 IsLoading = true;
                 StateHasChanged();
 
@@ -137,7 +138,6 @@
                 StateHasChanged();
 
                 ChartsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", new CancellationToken(), "./js/GeneratedJS/ItemCharts.js");
-
                 RenderCharts();
             }
             catch (Exception ex)
@@ -151,31 +151,29 @@
     {
         try
         {
-            // Dummy Chart Data
-            List<int> healthy = new();
-            List<int> unhealthy = new();
-            List<DateTime> dates = new();
-
-            Random randomNum = new Random();
-
             // Pie Chart Data
-            var totalCount = AllRecords.Count();
-            var happyPercentage = AllRecords.Where(x => x.Sentiment == Mood.Positive).Count() / totalCount;
-            var sadPercentage = 100 - happyPercentage;
+            decimal totalCount = AllRecords.Count();
+            var happyPercentage = Math.Round((decimal)(AllRecords.Where(x => x.Sentiment == Mood.Positive).Count() / totalCount) * 100, 2);
+            var sadPercentage = Math.Round((decimal)(AllRecords.Where(x => x.Sentiment == Mood.Negative).Count() / totalCount) * 100, 2);
+            var neutralPercentage = Math.Round(((decimal)AllRecords.Where(x => x.Sentiment == Mood.Neutral).Count() / totalCount) * 100, 2);
 
-            Percentages = new decimal[] { happyPercentage, sadPercentage, 0 };
+            Percentages = new decimal[] { happyPercentage, sadPercentage, neutralPercentage };
 
-            for (int i = 0; i < 7; i++)
+            // Date Labels
+            foreach (var record in AllRecords)
             {
-                dates.Add(DateTime.Now.AddDays(i));
-
-                healthy.Add(randomNum.Next(100));
-                unhealthy.Add(randomNum.Next(100));
+                BarChartData.Add(new ChartData()
+                    {
+                        Date = record.CreatedAt,
+                        SentimentScore = (decimal)record.Score,
+                        Text = record.RawText
+                    });
             }
 
-            var formattedDates = dates.Select(x => x.ToString("MM/dd/yyyy")).ToArray();
+            var dates = BarChartData.Select(x => x.Date.ToString("MM/dd/yyyy") ).ToArray();
+            var sentimentScores = BarChartData.Select(x => x.SentimentScore).ToArray();
 
-            await ChartsModule.InvokeVoidAsync("RenderCharts", new CancellationToken(), formattedDates, healthy.ToArray(), unhealthy.ToArray(), Percentages);
+            await ChartsModule.InvokeVoidAsync("RenderCharts", new CancellationToken(), dates, sentimentScores, Percentages);
         }
         catch (Exception ex)
         {

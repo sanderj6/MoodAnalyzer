@@ -50,8 +50,8 @@ public class ChartData
 {
     public DateTime Date;
     public Mood Status;
-    public int Count;
-    public decimal AvailabilityCount;
+    public decimal SentimentScore;
+    public string Text;
 }
 
 public class ConfidenceScore
