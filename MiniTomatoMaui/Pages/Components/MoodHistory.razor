@@ -8,15 +8,15 @@
 
 @inject IJSRuntime JsRuntime
 
-<div class="col-10 offset-1">
+<div class="col-xl-10 col-12 offset-xl-1">
     <div class="row" style="display: flex;">
         @if (IsLoading)
         {
-            <div class="offset-5 loader"></div>
+            <div class="offset-xl-5 offset-3 loader"></div>
         }
         else
         {
-            <div class="col-8" style="overflow:hidden;width: 40vw;">
+            <div class="col-xl-8 col-12" style="overflow:hidden;">
                 <div class="card-styles">
 
                     <div class="block-header block-header-default">
@@ -31,7 +31,7 @@
                 </div>
             </div>
 
-            <div class="col-4" style="overflow:hidden;">
+            <div class="col-xl-4 col-12" style="overflow:hidden;">
                 <div class="card-styles" style="height:100%;">
                     <div class="block-header block-header-default">
                         <h3 class="block-title">Happiness Percentage</h3>
@@ -45,7 +45,7 @@
         }
     </div>
 
-    <div class="col-4 offset-4">
+    <div class="col-xl-4 col-12 offset-xl-4">
         <div class="row">
             <div class="col-4 fw-bold">
                 Latest Mood:
@@ -56,7 +56,7 @@
         </div>
         <div class="row">
             <div class="col-4 fw-bold">
-                Overall Sentiment:
+                Overall:
             </div>
             <div class="col-8 text-muted">
                 @Model?.Sentiment
@@ -72,7 +72,7 @@
         </div>
     </div>
 
-    <div class="mt-4 float-end">
+    <div class="mt-4 mb-3 float-end">
         <button class="btn btn-primary btn-block" @onclick="(() => {ContinueToState(SessionState.Input);})">Start Over</button>
     </div>
 

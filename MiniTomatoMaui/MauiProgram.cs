@@ -31,6 +31,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<TextAnalyzerService>();
 
+
         return builder.Build();
     }
 }

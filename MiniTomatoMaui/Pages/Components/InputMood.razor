@@ -8,7 +8,7 @@
 
 <EditForm Model="Model" OnSubmit="Submitted">
     <div class="row mt-4">
-        <div class="col-8 offset-2">
+        <div class="col-xl-8 col-10 offset-xl-2 offset-1">
             <p>
                 Describe how you're feeling today
             </p>
@@ -59,6 +59,7 @@
     {
         try
         {
+            //Sentiment = await SentimentClient.AnalyzeText(Model.RawText);
             Sentiment = await SentimentClient.AnalyzeText(Model.RawText);
 
             Model.Sentences = Sentiment.Sentences.ToList();

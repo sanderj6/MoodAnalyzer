@@ -6,10 +6,10 @@
 @using MiniTomatoMaui.CosmosDB
 @using MiniTomatoMaui.Data
 
-<div class="col-8 offset-2 mt-4">
+<div class="col-xl-8 col-10 offset-xl-2 offset-1 mt-4">
     @if (IsLoading)
     {
-        <div class="offset-5 loader"></div>
+        <div class="offset-xl-5 offset-3 loader"></div>
     }
     else
     {
@@ -21,9 +21,9 @@
                 var isDisabled = !isAccurate;
                 var disabledText = isAccurate ? "" : "line-through";
 
-                <div class="row mb-3">
+                <div class="row mb-3 align-content-center">
 
-                    <div class="col-6 text-muted" style="text-decoration:@disabledText">
+                    <div class="col-xl-6 col-4 text-muted" style="text-decoration:@disabledText">
                         @sentence.Text
                     </div>
                     <div class="col-3" style="text-decoration:@disabledText">
@@ -37,7 +37,7 @@
             }
         }
 
-        <div>
+        <div class="offset-1 mt-4">
             Day Score: <b>@Model?.Score %</b>
         </div>
 
