@@ -1,6 +1,6 @@
 ﻿@page "/intelligence"
 @using Azure
-@using Azure.AI.TextAnalytics
+
 @using System.Text.Json
 @using System.Diagnostics
 @using MiniTomatoMaui.CosmosDB
@@ -86,10 +86,12 @@
     {
         try
         {
-            Model.Sentences.Remove(sentence);
+            // Remove Sentence and Score from sentiment
+            var removalSentence = Model.Sentences.Where(x => x.Text == sentence.Text).FirstOrDefault();
+            Model.Sentences.Remove(removalSentence);
 
-            var score = Model.ConfidenceScores.Where(x => x.ConfidenceType.ToString() == sentence.Sentiment.ToString()).FirstOrDefault();
-            Model.ConfidenceScores.Remove(score);
+            var removeScore = Model.ConfidenceScores.Where(x => x.ConfidenceType.ToString().ToUpper() == sentence.Sentiment.ToString().ToUpper()).FirstOrDefault();
+            Model.ConfidenceScores.Remove(removeScore);
         }
         catch (Exception ex)
         {
