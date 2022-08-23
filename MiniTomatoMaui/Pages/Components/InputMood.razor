@@ -55,6 +55,20 @@
 
     public string Errors { get; set; }
 
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            base.OnInitialized();
+
+            Model = new UserRecord();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
     public async Task Submitted()
     {
         try

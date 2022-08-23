@@ -97,18 +97,6 @@
 
     public List<UserRecord> AllRecords { get; set; } = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            base.OnInitialized();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
-    }
-
     public async Task GetUserRecords()
     {
         AllRecords = await DbContext.UserRecords.ToListAsync();
